@@ -6,6 +6,7 @@ var app = {
     app.functionOne();
   },
   functionOne: function () {
+    console.log("a")
   }
 };
 $("document").ready(function () {

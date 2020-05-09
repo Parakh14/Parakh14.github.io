@@ -9,11 +9,12 @@ var gulp = require("gulp"),
   merge = require("merge-stream"),
   htmlreplace = require("gulp-html-replace"),
   autoprefixer = require("gulp-autoprefixer"),
-  browserSync = require("browser-sync").create();
+  browserSync = require("browser-sync").create(),
+  imagemin = require('gulp-imagemin');
 
 // Clean task
 gulp.task("clean", function() {
-  return del(["dist", "assets/css/app.css"]);
+  return del(["./*.html", "./build/assets/css/app.css"]);
 });
 
 // Copy third party libraries from node_modules into /vendor
@@ -25,7 +26,7 @@ gulp.task("vendor:js", function() {
       "!./node_modules/jquery/dist/core.js",
       "./node_modules/popper.js/dist/umd/popper.*"
     ])
-    .pipe(gulp.dest("./assets/js/vendor"));
+    .pipe(gulp.dest("./build/assets/js/vendor"));
 });
 
 // Copy font-awesome from node_modules into /fonts
@@ -38,7 +39,7 @@ gulp.task("vendor:fonts", function() {
       "!./node_modules/@fortawesome/fontawesome-free/.*",
       "!./node_modules/@fortawesome/fontawesome-free/*.{txt,json,md}"
     ])
-    .pipe(gulp.dest("./assets/fonts/font-awesome"));
+    .pipe(gulp.dest("./build/assets/fonts/font-awesome"));
 });
 
 // vendor task
@@ -48,14 +49,14 @@ gulp.task("vendor", gulp.parallel("vendor:fonts", "vendor:js"));
 gulp.task("vendor:build", function() {
   var jsStream = gulp
     .src([
-      "./assets/js/vendor/bootstrap.bundle.min.js",
-      "./assets/js/vendor/jquery.slim.min.js",
-      "./assets/js/vendor/popper.min.js"
+      "./build/assets/js/vendor/bootstrap.bundle.min.js",
+      "./build/assets/js/vendor/jquery.slim.min.js",
+      "./build/assets/js/vendor/popper.min.js"
     ])
-    .pipe(gulp.dest("./dist/assets/js/vendor"));
+    .pipe(gulp.dest("./assets/js/vendor"));
   var fontStream = gulp
-    .src(["./assets/fonts/font-awesome/**/*.*"])
-    .pipe(gulp.dest("./dist/assets/fonts/font-awesome"));
+    .src(["./build/assets/fonts/font-awesome/**/*.*"])
+    .pipe(gulp.dest("./assets/fonts/font-awesome"));
   return merge(jsStream, fontStream);
 });
 
@@ -63,7 +64,7 @@ gulp.task("vendor:build", function() {
 gulp.task("bootstrap:scss", function() {
   return gulp
     .src(["./node_modules/bootstrap/scss/**/*"])
-    .pipe(gulp.dest("./assets/scss/bootstrap"));
+    .pipe(gulp.dest("./build/assets/scss/bootstrap"));
 });
 
 // Compile SCSS(SASS) files
@@ -71,7 +72,7 @@ gulp.task(
   "scss",
   gulp.series("bootstrap:scss", function compileScss() {
     return gulp
-      .src(["./assets/scss/*.scss"])
+      .src(["./build/assets/scss/*.scss"])
       .pipe(
         sass
           .sync({
@@ -80,7 +81,7 @@ gulp.task(
           .on("error", sass.logError)
       )
       .pipe(autoprefixer())
-      .pipe(gulp.dest("./assets/css"));
+      .pipe(gulp.dest("./build/assets/css"));
   })
 );
 
@@ -89,14 +90,14 @@ gulp.task(
   "css:minify",
   gulp.series("scss", function cssMinify() {
     return gulp
-      .src("./assets/css/app.css")
+      .src("./build/assets/css/app.css")
       .pipe(cleanCSS())
       .pipe(
         rename({
           suffix: ".min"
         })
       )
-      .pipe(gulp.dest("./dist/assets/css"))
+      .pipe(gulp.dest("./assets/css"))
       .pipe(browserSync.stream());
   })
 );
@@ -104,42 +105,42 @@ gulp.task(
 // Minify Js
 gulp.task("js:minify", function() {
   return gulp
-    .src(["./assets/js/app.js"])
+    .src(["./build/assets/js/app.js"])
     .pipe(uglify())
     .pipe(
       rename({
         suffix: ".min"
       })
     )
-    .pipe(gulp.dest("./dist/assets/js"))
+    .pipe(gulp.dest("./assets/js"))
     .pipe(browserSync.stream());
 });
 
 // Replace HTML block for Js and Css file upon build and copy to /dist
 gulp.task("replaceHtmlBlock", function() {
   return gulp
-    .src(["*.html"])
+    .src(["./build/*.html"])
     .pipe(
       htmlreplace({
         js: "assets/js/app.min.js",
         css: "assets/css/app.min.css"
       })
     )
-    .pipe(gulp.dest("dist/"));
+    .pipe(gulp.dest("./"));
 });
 
 // Configure the browserSync task and watch file path for change
 gulp.task("watch", function browserDev(done) {
   browserSync.init({
     server: {
-      baseDir: "./"
+      baseDir: "./build/"
     }
   });
   gulp.watch(
     [
-      "assets/scss/*.scss",
-      "assets/scss/**/*.scss",
-      "!assets/scss/bootstrap/**"
+      "build/assets/scss/*.scss",
+      "build/assets/scss/**/*.scss",
+      "!build/assets/scss/bootstrap/**"
     ],
     gulp.series("css:minify", function cssBrowserReload(done) {
       browserSync.reload();
@@ -147,7 +148,7 @@ gulp.task("watch", function browserDev(done) {
     })
   );
   gulp.watch(
-    "assets/js/app.js",
+    "build/assets/js/app.js",
     gulp.series("js:minify", function jsBrowserReload(done) {
       browserSync.reload();
       done();
@@ -165,8 +166,9 @@ gulp.task(
     "vendor:build",
     function copyAssets() {
       return gulp
-        .src(["*.html", "favicon.ico", "assets/img/**"], { base: "./" })
-        .pipe(gulp.dest("dist"));
+        .src(["build/*.html", "build/favicon.ico", "build/assets/img/**"], { base: "./build/" })
+        .pipe(imagemin())
+        .pipe(gulp.dest("./"));
     }
   )
 );
